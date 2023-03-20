@@ -26,9 +26,6 @@ if (resultStr is not null)
         sendbuf = ScreenShot.ScreenShotMethod(size).ToArray();
 
         foreach (var item in sendbuf.Chunk(65506))
-        {
             await server.SendAsync(item, clientEP);
-            Thread.Sleep(TimeSpan.FromMilliseconds(0.75));
-        }
     }
 }

@@ -37,34 +37,31 @@ public partial class MainWindow : Window
             {
                 btn.IsEnabled = false;
                 UdpReceiveResult rec_Bytes;
-
-                await Task.Run(async () =>
+                
+                while (true)
                 {
-                    while (true)
+                    rec_Bytes = await client.ReceiveAsync();
+
+                    if (rec_Bytes.Buffer.Length != 65506)
                     {
-                        rec_Bytes = await client.ReceiveAsync();
+                        list.AddRange(rec_Bytes.Buffer);
 
-                        if (rec_Bytes.Buffer.Length != 65506)
+                        Dispatcher.Invoke(() =>
                         {
-                            list.AddRange(rec_Bytes.Buffer);
+                            BitmapImage bitmap = new BitmapImage();
 
-                            Dispatcher.Invoke(() =>
-                            {
-                                BitmapImage bitmap = new BitmapImage();
+                            bitmap.BeginInit();
+                            bitmap.StreamSource = new MemoryStream(list.ToArray());
+                            bitmap.EndInit();
 
-                                bitmap.BeginInit();
-                                bitmap.StreamSource = new MemoryStream(list.ToArray());
-                                bitmap.EndInit();
+                            img.Source = bitmap;
+                        });
 
-                                img.Source = bitmap;
-                            });
-
-                            list.Clear();
-                        }
-                        else
-                            list.AddRange(rec_Bytes.Buffer);
+                        list.Clear();
                     }
-                });
+                    else
+                        list.AddRange(rec_Bytes.Buffer);
+                }
             }
             catch (SocketException ex)
             {
