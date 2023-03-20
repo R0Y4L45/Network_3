@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using System.IO;
 using System.Windows.Threading;
+using System.Collections.Generic;
 
 namespace Screen_live;
 
@@ -26,7 +27,8 @@ public partial class MainWindow : Window
     private async void btn_Click(object sender, RoutedEventArgs e)
     {
         var pulse = Encoding.Default.GetBytes("hello");
-        int lenght, wholeNum, a = 0;
+        int wholeNum;
+        var list = new List<byte>();
         if (client != null && server != null)
         {
             await client.SendAsync(pulse, pulse.Length, server);
@@ -34,37 +36,33 @@ public partial class MainWindow : Window
             try
             {
                 btn.IsEnabled = false;
-                UdpReceiveResult rec_Bytes, rec_lenght, rec_wholeNum;
+                UdpReceiveResult rec_Bytes;
 
                 await Task.Run(async () =>
                 {
                     while (true)
                     {
-                        rec_lenght = await client.ReceiveAsync();
-                        rec_wholeNum = await client.ReceiveAsync();
+                        rec_Bytes = await client.ReceiveAsync();
 
-                        lenght = int.Parse(Encoding.Default.GetString(rec_lenght.Buffer));
-                        wholeNum = int.Parse(Encoding.Default.GetString(rec_wholeNum.Buffer));
-                        a = 0;
-                        byte[] arr = new byte[lenght];
-
-                        for (int i = 0; i < wholeNum; i++)
+                        if (rec_Bytes.Buffer.Length != 65506)
                         {
-                            rec_Bytes = await client.ReceiveAsync();
-                            for (int k = 0; k < rec_Bytes.Buffer.Length; k++)
-                                arr[a++] = rec_Bytes.Buffer[k];
+                            list.AddRange(rec_Bytes.Buffer);
+
+                            Dispatcher.Invoke(() =>
+                            {
+                                BitmapImage bitmap = new BitmapImage();
+
+                                bitmap.BeginInit();
+                                bitmap.StreamSource = new MemoryStream(list.ToArray());
+                                bitmap.EndInit();
+
+                                img.Source = bitmap;
+                            });
+
+                            list.Clear();
                         }
-
-                        Dispatcher.Invoke(() =>
-                        {
-                            BitmapImage bitmap = new BitmapImage();
-
-                            bitmap.BeginInit();
-                            bitmap.StreamSource = new MemoryStream(arr);
-                            bitmap.EndInit();
-
-                            img.Source = bitmap;
-                        });
+                        else
+                            list.AddRange(rec_Bytes.Buffer);
                     }
                 });
             }
